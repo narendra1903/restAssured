@@ -1,0 +1,1 @@
+package Day001_Static_imports;

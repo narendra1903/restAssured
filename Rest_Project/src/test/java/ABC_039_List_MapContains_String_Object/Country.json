@@ -1,0 +1,24 @@
+{
+  "Description": "Map containing Country, Capital, Currency, and some States of that Country",
+  "Region": "Asia",
+  "Countries": [
+    {
+      "Country": "India",
+      "Data": {
+        "Capital": "New Delhi",
+        "minimum temp (Degree Celsius)": 6,
+        "maximum temp (Degree Celsius)": 45,
+        "Currency": "Rupee"
+      }
+    },
+    {
+      "Country": "Nepal",
+      "Data": {
+        "Capital": "Katmandu",
+        "minimum temp (Degree Celsius)": 9,
+        "maximum temp (Degree Celsius)": 23,
+        "Currency": "Nepalese rupee"
+      }
+    }
+  ]
+}

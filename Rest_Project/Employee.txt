@@ -1,0 +1,4 @@
+EMPNO,ENAME,SAL
+100,Sudhakar,1000
+200,Sudhakar,2000
+300,Sudhakar,3000

@@ -1,0 +1,11 @@
+QueryableRequestSpecification queryRequest = SpecificationQuerier.query(reqSpec);
+
+queryRequest.getBaseUri();
+queryRequest.getBody();
+queryRequest.getBasePath();
+
+Headers allHeaders = queryRequest.getHeaders();
+for(Header h:allHeaders)
+{
+	System.out.println("Header name:" + h.getName() + "\tHeader value:" + h.getValue());
+}

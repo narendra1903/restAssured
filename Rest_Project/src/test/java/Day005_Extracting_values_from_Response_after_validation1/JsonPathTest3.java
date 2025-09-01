@@ -1,0 +1,325 @@
+package Day005_Extracting_values_from_Response_after_validation1;
+
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasEntry;
+import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.Matchers.is;
+
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+
+import org.testng.annotations.BeforeTest;
+import org.testng.annotations.Test;
+
+import io.restassured.RestAssured;
+import io.restassured.path.json.JsonPath;
+import io.restassured.path.json.config.JsonPathConfig;
+import io.restassured.response.Response;
+import io.restassured.specification.RequestSpecification;
+
+public class JsonPathTest3 {
+
+	  public   String JSON = "";
+
+	  
+	    
+	    @BeforeTest
+	    public void Test1()
+	    {
+	    	RestAssured.baseURI = "http://localhost:8080";
+			RequestSpecification httpRequest = RestAssured.given();
+			Response response = httpRequest.get("/store.json");
+
+			// First get the JsonPath object instance from the Response interface
+			JsonPath j1 = response.jsonPath();
+			
+			JSON=response.body().asString();
+	    }
+
+	  
+	    public void getList() {
+	        final List<String> categories = new JsonPath(JSON).get("store.book.category");
+	        assertThat(categories.size(), equalTo(4));
+	        assertThat(categories, hasItems("reference", "fiction"));
+	    }
+
+	    
+	    public void firstBookCategory() {
+	        final String category = JsonPath.with(JSON).get("store.book[0].category");
+	        assertThat(category, equalTo("reference"));
+	    }
+
+	 
+	    public void lastBookTitle() {
+	        final String title = JsonPath.with(JSON).get("store.book[-1].title");
+	        assertThat(title, equalTo("The Lord of the Rings"));
+	    }
+
+	    @Test
+	    public void Verify_Autor_as_HermanMelville_booksWithArgAuthor() {
+	    	
+	        String author = "Herman Melville";
+	        
+	        final List<Map<String, ?>> books = JsonPath.with(JSON)
+	                .param("author", author)
+	                .get("store.book.findAll { book -> book.author == author }");
+	        assertThat(books.size(), equalTo(1));
+
+	        final String authorActual = (String) books.get(0).get("author");
+	        
+	        System.out.println(authorActual);
+	        
+	        assertThat(authorActual, equalTo(author));
+	    }
+
+	   
+	    public void booksBetween5And15() {
+	    	
+	        final List<Map<String, ?>> books = JsonPath.with(JSON).
+	        get("store.book.findAll { book -> book.price >= 5 && book.price <= 15 }");
+	        assertThat(books.size(), equalTo(3));
+
+	        final String author = (String) books.get(0).get("author");
+	        assertThat(author, equalTo("Nigel Rees"));
+
+	        final Float price = (Float) books.get(1).get("price");
+	        assertThat(price, equalTo(12.99F));
+	    }
+
+	  
+	    public void sizeInPath() {
+	        final Integer size = JsonPath.with(JSON).get("store.book.size()");
+	        assertThat(size, equalTo(4));
+	    }
+
+	  
+	    public void getRootObjectAsMap() {
+	    	
+	        final Map<String, Map> store = JsonPath.given(JSON).get("store");
+	        assertThat(store.size(), equalTo(2));
+
+	        final Map<String, Object> bicycle = store.get("bicycle");
+	        final String color = (String) bicycle.get("color");
+	        final float price = (Float) bicycle.get("price");
+	        assertThat(color, equalTo("red"));
+	        assertThat(price, equalTo(19.95f));
+	    }
+
+	    public void getFloatAndDoublesAsBigDecimal() {
+	        final JsonPath using = JsonPath.with(JSON).using
+	        		(new JsonPathConfig(JsonPathConfig.NumberReturnType.BIG_DECIMAL));
+	        
+	        assertThat(using.<Map<String, Map>>get("store").size(), equalTo(2));
+
+	        final Map<String, Object> bicycle = using.<Map<String, Map>>get("store").get("bicycle");
+	        final String color = (String) bicycle.get("color");
+	        final BigDecimal price = (BigDecimal) bicycle.get("price");
+	        assertThat(color, equalTo("red"));
+	        assertThat(price, equalTo(new BigDecimal("19.95")));
+	    }
+
+	  
+	    public void getFloatAndDoublesAsBigDecimalUsingStaticConfiguration() {
+	        JsonPath.config = new JsonPathConfig().numberReturnType(JsonPathConfig.NumberReturnType.BIG_DECIMAL);
+	        try {
+	            final Map<String, Map> store = JsonPath.with(JSON).get("store");
+	            assertThat(store.size(), equalTo(2));
+
+	            final Map<String, Object> bicycle = store.get("bicycle");
+	            final String color = (String) bicycle.get("color");
+	            final BigDecimal price = (BigDecimal) bicycle.get("price");
+	            assertThat(color, equalTo("red"));
+	            assertThat(price, equalTo(new BigDecimal("19.95")));
+	        } finally {
+	            JsonPath.config = null;
+	        }
+	    }
+
+	   
+	    public void nonStaticJsonPathConfigHasPrecedenceOverStaticConfiguration() {
+	        JsonPath.config = new JsonPathConfig().numberReturnType(JsonPathConfig.NumberReturnType.FLOAT_AND_DOUBLE);
+	        try {
+	            final Map<String, Map> store = JsonPath.with(JSON)
+	            		.using(new JsonPathConfig(JsonPathConfig.NumberReturnType.BIG_DECIMAL)).get("store");
+	            assertThat(store.size(), equalTo(2));
+
+	            final Map<String, Object> bicycle = store.get("bicycle");
+	            final String color = (String) bicycle.get("color");
+	            final BigDecimal price = (BigDecimal) bicycle.get("price");
+	            assertThat(color, equalTo("red"));
+	            assertThat(price, equalTo(new BigDecimal("19.95")));
+	        } finally {
+	            JsonPath.config = null;
+	        }
+	    }
+
+	   
+	    public void getRootObjectAsMap2() {
+	        final Map<String, Object> store = JsonPath.from(JSON).get("store.book[0]");
+	        
+	        for (Map.Entry<String, Object> stringObjectEntry : store.entrySet()) {
+	            System.out.println(stringObjectEntry.getKey() + " = " + stringObjectEntry.getValue());
+	        }
+	    }
+
+	    /*@Test
+	    public void rootPath() {
+	        final JsonPath jsonPath = new JsonPath(JSON).setRootPath("store.book");
+	        assertThat(jsonPath.getInt("size()"), equalTo(4));
+	        assertThat(jsonPath.getList("author", String.class), hasItem("J. R. R. Tolkien"));
+	    }
+
+	    @Test
+	    public void rootPathFollowedByArrayIndexing() {
+	        final JsonPath jsonPath = new JsonPath(JSON).setRootPath("store.book");
+	        assertThat(jsonPath.getString("[0].author"), equalTo("Nigel Rees"));
+	    }*/
+
+	   
+	    
+
+	
+	    public void getNumericalValues() {
+	        //assertThat(JsonPath.with(JSON).getDouble("store.book[0].price"), equalTo(8.95D));
+	        //assertThat(JsonPath.with(JSON).getFloat("store.book[0].price"), equalTo(8.95F));
+
+	        // The price is stored as an integer
+	       /* assertThat(JsonPath.with(JSON).getByte("store.book[1].price"), equalTo((byte) 12));
+	        assertThat(JsonPath.with(JSON).getShort("store.book[1].price"), equalTo((short) 12));
+	        assertThat(JsonPath.with(JSON).getInt("store.book[1].price"), equalTo(12));
+	        assertThat(JsonPath.with(JSON).getLong("store.book[1].price"), equalTo(12L));
+			*/
+	        
+	        // The atoms is stored as a long
+	       // assertThat(JsonPath.with(JSON).getByte("store.bicycle.atoms"), equalTo((byte) Long.MAX_VALUE));
+	       // assertThat(JsonPath.with(JSON).getShort("store.bicycle.atoms"), equalTo((short) Long.MAX_VALUE));
+	       // assertThat(JsonPath.with(JSON).getInt("store.bicycle.atoms"), equalTo((int) Long.MAX_VALUE));
+	       // assertThat(JsonPath.with(JSON).getLong("store.bicycle.atoms"), equalTo(Long.MAX_VALUE));
+	    }
+
+	  
+	    
+
+	  
+
+	   
+
+	 
+
+	  
+	   
+	    
+	    public void getStringConvertsTheResultToAString() {
+	        final String priceAsString = JsonPath.with(JSON).getString("store.book.price[0]");
+
+	        assertThat(priceAsString, is("8.95"));
+	    }
+
+
+	    /*
+	    @Test
+	    public void getObjectWorksWhenPathPointsToAJsonObject() {
+	        final Book book = JsonPath.from(JSON).getObject("store.book[2]", Book.class);
+
+	        assertThat(book, equalTo(new Book("fiction", "Herman Melville", "Moby Dick", "0-553-21311-3", 8.99f)));
+	    }*/
+
+	   /* @Test
+	    public void getObjectWorksWhenPathPointsToATypeRefMap() {
+	        final Map<String, Object> book = JsonPath.from(JSON).getObject("store.book[2]", new TypeRef<Map<String, Object>>() {});
+
+	        assertThat(book.get("category"), Matchers.<Object>equalTo("fiction"));
+	        assertThat(book.get("author"), Matchers.<Object>equalTo("Herman Melville"));
+	        assertThat(book.get("price"), Matchers.<Object>equalTo(8.99));
+	    }*/
+
+	/*    @Test
+	    public void getObjectWorksWhenPathPointsToATypeRefList() {
+	        final List<Float> prices = JsonPath.from(JSON).getObject("store.book.price", new TypeRef<List<Float>>() {});
+
+	        assertThat(prices, containsInAnyOrder(8.95, 12, 8.99, 22.99));
+	    }*/
+
+	    /*@Test
+	    public void getObjectWorksWhenPathPointsToAJsonObject2() {
+	        final List<Book> books = JsonPath.from(JSON).getList("store.book", Book.class);
+
+	        assertThat(books, hasSize(4));
+	        assertThat(books.get(0).getAuthor(), equalTo("Nigel Rees"));
+	    }*/
+
+
+	    public void getObjectAsMapWorksWhenPathPointsToAJsonObject() {
+	        
+	    	//final Map<String, String> book = JsonPath.from(JSON).getObject("store.book[2]", Map.class);
+	    	final Map<String, String> book = JsonPath.from(JSON).getMap("store.book[2]");
+	        assertThat(book, hasEntry("category", "fiction"));
+	        assertThat(book, hasEntry("author", "Herman Melville"));
+	    }
+
+	
+	    public void getObjectWorksWhenPathPointsToAList() {
+	        final List<String> categories = JsonPath.from(JSON).getList("store.book.category");
+
+	        assertThat(categories, hasItems("reference", "fiction"));
+	    }
+
+	   
+	    public void getObjectAsFloatWorksWhenPathPointsToAFloat() {
+	        final Float price = JsonPath.from(JSON).getObject("store.book.price[0]", Float.class);
+
+	        assertThat(price, equalTo(8.95f));
+	    }
+
+	   
+	    public void getObjectAsStringWorksWhenPathPointsToAString() {
+	        final String category = JsonPath.from(JSON).getObject("store.book.category[0]", String.class);
+
+	        assertThat(category, equalTo("reference"));
+	    }
+
+	    
+	 
+	    public void canParseJsonDocumentWhenPathIncludesMinusInsideEscaped() {
+	        JsonPath path = new JsonPath("{ \"a-b\"  : \"minus\" , \"a.b\" : \"dot\"  , \"a.b-c\" : \"both\"  }");
+
+	        assertThat(path.getString("'a.b-c'"), equalTo("both"));
+	    }
+
+	    /**
+	     * Verifies that issue 195 is resolved.
+	     */
+	  
+	    public void canParseJsonDocumentWithMultipleConsecutiveIntegersInsidePath() {
+	        String json = "{\n" +
+	                "    \"foo.bar.baz\": {\n" +
+	                "        \"0.2.0\": \"test\"\n" +
+	                "    }\n" +
+	                "}";
+
+	        final String string = JsonPath.from(json).getString("'foo.bar.baz'.'0.2.0'");
+
+	        assertThat(string, equalTo("test"));
+	    }
+
+
+	    public void
+	    can_parse_multiple_values() {
+	        // Given
+	        final JsonPath jsonPath = new JsonPath(JSON);
+
+	        // When
+	        final String category1 = jsonPath.getString("store.book.category[0]");
+	        final String category2 = jsonPath.getString("store.book.category[1]");
+
+	        // Then
+	        assertThat(category1, equalTo("reference"));
+	        assertThat(category2, equalTo("fiction"));
+	    }
+
+	   
+	
+}
